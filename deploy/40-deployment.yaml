@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-task-runner
+  namespace: agent-tasks
+  labels:
+    app.kubernetes.io/name: agent-task-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agent-task-runner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agent-task-runner
+    spec:
+      serviceAccountName: agent-task-runner
+      automountServiceAccountToken: true
+      securityContext:
+        runAsUser: 10000
+        runAsGroup: 10000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent-task-runner
+          image: registry.example.com/agent-task-runner:v0.1.0  # replace with your registry
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: agent-task-runner-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-task-llm
+                  key: API_KEY
+          securityContext:
+            runAsUser: 10000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

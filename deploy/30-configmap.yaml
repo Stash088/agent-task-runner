@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-task-runner-config
+  namespace: agent-tasks
+  labels:
+    app.kubernetes.io/name: agent-task-runner
+data:
+  LISTEN_ADDR: ":8080"
+  WORKER_NAMESPACE: "agent-tasks"
+  # Digest-pinned image from the 2026-11-07 spike. Update together with the
+  # gateway and re-run scripts/e2e.sh.
+  WORKER_IMAGE: "nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960381f0fc002"
+  LLM_SECRET_NAME: "agent-task-llm"
+  MAX_CONCURRENT_JOBS: "3"
+  DEFAULT_TIMEOUT_SECONDS: "1800"
+  MAX_TIMEOUT_SECONDS: "7200"
+  DEFAULT_MODEL: "deepseek-v4.1-flash"
+  DEFAULT_PROVIDER: "opencode-go"
+  DEFAULT_TOOLSETS: "web"
+  ALLOWED_PROVIDERS: "opencode-go,zai"
+  ALLOWED_MODELS: '^(deepseek-v4\.[0-9](-[a-z]+)?|glm-5[.0-9]*(-flash)?|qwen3\.[0-9](-flash)?)$'
+  ALLOWED_TOOLSETS: "web,files,terminal,memory"
+  DEFAULT_CPU: "500m"
+  DEFAULT_MEMORY: "1Gi"
+  MAX_CPU: "2"
+  MAX_MEMORY: "4Gi"
+  MAX_LOG_BYTES: "262144"
+  TTL_SECONDS: "3600"
+  SHUTDOWN_TIMEOUT_SECONDS: "15"

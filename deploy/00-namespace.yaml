@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-tasks
+  labels:
+    app.kubernetes.io/name: agent-task-runner
+    app.kubernetes.io/part-of: agent-task-runner

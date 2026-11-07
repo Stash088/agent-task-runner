@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-task-runner
+  namespace: agent-tasks
+  labels:
+    app.kubernetes.io/name: agent-task-runner
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-task-runner
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only the Hermes gateway namespace may reach the MCP endpoint.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: hermes
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS resolution (kube-dns / CoreDNS).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Kubernetes API server. kube-router evaluates egress rules AFTER the
+    # ClusterIP DNAT, so the post-NAT destination is the node IP on 6443 —
+    # allowing only <API_SERVICE_IP>:443 leaves /readyz permanently 503 (verified
+    # in-cluster 2026-11-07). Both forms are listed so the rule survives either
+    # evaluation order.
+    - to:
+        - ipBlock:
+            cidr: <SERVICE_CIDR>
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - ipBlock:
+            cidr: <POD_CIDR>
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - ipBlock:
+            cidr: <API_NODE_1_IP>/32
+        - ipBlock:
+            cidr: <API_NODE_2_IP>/32
+        - ipBlock:
+            cidr: <API_NODE_3_IP>/32
+      ports:
+        - protocol: TCP
+          port: 6443

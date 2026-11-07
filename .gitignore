@@ -1,0 +1,8 @@
+# Local agent scratch / delegation prompts — never committed.
+.opencode-task-*.md
+
+# Build artifacts
+/agent-task-runner
+/dist/
+*.test
+*.out

@@ -1,0 +1,95 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    atr.io/prompt-preview: 'reply with exactly: OK"; rm -rf / # $(id)'
+    atr.io/toolsets: web,files
+  labels:
+    app.kubernetes.io/managed-by: agent-task-runner
+    app.kubernetes.io/name: agent-task-runner
+    atr.io/task-id: atr-1f3c9a7b2d41
+  name: atr-1f3c9a7b2d41
+  namespace: agent-tasks
+spec:
+  activeDeadlineSeconds: 1800
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agent-task-worker
+        atr.io/task-id: atr-1f3c9a7b2d41
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - exec hermes -z "$TASK_PROMPT" -m "$TASK_MODEL" --provider "$TASK_PROVIDER"
+          -t "$TASK_TOOLSETS" --ignore-user-config --yolo
+        command:
+        - /bin/sh
+        - -c
+        env:
+        - name: HERMES_HOME
+          value: /data/home
+        - name: HOME
+          value: /data/home
+        - name: TASK_PROMPT
+          value: 'reply with exactly: OK"; rm -rf / # $(id)'
+        - name: TASK_MODEL
+          value: deepseek-v4.1-flash
+        - name: TASK_PROVIDER
+          value: opencode-go
+        - name: TASK_TOOLSETS
+          value: web,files
+        - name: OPENCODE_GO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: OPENCODE_GO_API_KEY
+              name: agent-task-llm
+        image: nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960381f0fc002
+        imagePullPolicy: IfNotPresent
+        name: hermes
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /data/home
+          name: home
+      enableServiceLinks: false
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - mkdir -p /data/home && chown 10000:10000 /data/home && chmod 0755 /data/home
+        image: busybox:1.36
+        name: chown-home
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /data/home
+          name: home
+      restartPolicy: Never
+      securityContext:
+        runAsGroup: 10000
+        runAsNonRoot: true
+        runAsUser: 10000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - emptyDir:
+          sizeLimit: 2Gi
+        name: home
+  ttlSecondsAfterFinished: 3600
+status: {}
