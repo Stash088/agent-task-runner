@@ -8,3 +8,12 @@ resources:
   - 50-service.yaml
   - 60-networkpolicy.yaml
   - 65-worker-networkpolicy.yaml
+configMapGenerator:
+  - name: agent-task-worker-home
+    namespace: agent-tasks
+    files:
+      - worker-home/zai-web-mcp/provider.py
+      - worker-home/zai-web-mcp/plugin.yaml
+      - worker-home/zai-web-mcp/__init__.py
+    options:
+      disableNameSuffixHash: true

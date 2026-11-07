@@ -32,6 +32,13 @@ spec:
           value: /data/home
         - name: HOME
           value: /data/home
+        - name: HERMES_WRITE_SAFE_ROOT
+          value: /data/home
+        - name: GLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: GLM_API_KEY
+              name: agent-task-llm
         - name: TASK_PROMPT
           value: 'reply with exactly: OK"; rm -rf / # $(id)'
         - name: TASK_MODEL
@@ -58,6 +65,9 @@ spec:
         volumeMounts:
         - mountPath: /data/home
           name: home
+        - mountPath: /data/home/plugins/zai-web-mcp
+          name: worker-plugins
+          readOnly: true
       enableServiceLinks: false
       initContainers:
       - command:
@@ -88,6 +98,10 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
+      - configMap:
+          name: agent-task-worker-home
+          optional: true
+        name: worker-plugins
       - emptyDir:
           sizeLimit: 2Gi
         name: home

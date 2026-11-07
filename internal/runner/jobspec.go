@@ -24,14 +24,17 @@ const (
 
 // Worker pod constants (fixed by the spike — do not change without a re-spike).
 const (
-	containerName     = "hermes"
-	initContainerName = "chown-home"
-	homeVolumeName    = "home"
-	homeMountPath     = "/data/home"
-	homeSizeLimit     = "2Gi"
-	busyboxImage      = "busybox:1.36"
-	runAsUID          = int64(10000)
-	runAsGID          = int64(10000)
+	containerName       = "hermes"
+	initContainerName   = "chown-home"
+	homeVolumeName      = "home"
+	workerHomeConfigMap = "agent-task-worker-home" // plugin bundle (z.ai web search/extract)
+	workerPluginsPath   = homeMountPath + "/plugins/zai-web-mcp"
+	pluginsVolumeName   = "worker-plugins"
+	homeMountPath       = "/data/home"
+	homeSizeLimit       = "2Gi"
+	busyboxImage        = "busybox:1.36"
+	runAsUID            = int64(10000)
+	runAsGID            = int64(10000)
 
 	initCPURequest    = "50m"
 	initMemoryRequest = "32Mi"
@@ -160,6 +163,18 @@ func BuildJob(taskID string, req *TaskRunRequest, cfg *config.Config) *batchv1.J
 							Env: []corev1.EnvVar{
 								{Name: "HERMES_HOME", Value: homeMountPath},
 								{Name: "HOME", Value: homeMountPath},
+								// The image defaults this to <hermes_home>, which is outside the
+								// writable workspace; the agent must write inside HERMES_HOME.
+								{Name: "HERMES_WRITE_SAFE_ROOT", Value: homeMountPath},
+								{
+									Name: "GLM_API_KEY", // z.ai web search/extract backend
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: cfg.LLMSecretName},
+											Key:                  "GLM_API_KEY",
+										},
+									},
+								},
 								{Name: "TASK_PROMPT", Value: req.Prompt},
 								{Name: "TASK_MODEL", Value: model},
 								{Name: "TASK_PROVIDER", Value: provider},
@@ -178,6 +193,7 @@ func BuildJob(taskID string, req *TaskRunRequest, cfg *config.Config) *batchv1.J
 							Args:    []string{`exec hermes -z "$TASK_PROMPT" -m "$TASK_MODEL" --provider "$TASK_PROVIDER" -t "$TASK_TOOLSETS" --ignore-user-config --yolo`},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: homeVolumeName, MountPath: homeMountPath},
+								{Name: pluginsVolumeName, MountPath: workerPluginsPath, ReadOnly: true},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -192,6 +208,15 @@ func BuildJob(taskID string, req *TaskRunRequest, cfg *config.Config) *batchv1.J
 						},
 					},
 					Volumes: []corev1.Volume{
+						{
+							Name: pluginsVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: workerHomeConfigMap},
+									Optional:             ptr(true),
+								},
+							},
+						},
 						{
 							Name: homeVolumeName,
 							VolumeSource: corev1.VolumeSource{

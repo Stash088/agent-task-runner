@@ -1,0 +1,11 @@
+name: zai-web-mcp
+version: 1.0.0
+description: >
+  Z.AI remote MCP backends for web search and page reading. Routes the built-in
+  web_search tool to the Z.AI Web Search MCP server (web_search_prime) and
+  web_extract to the Z.AI Web Reader MCP server (webReader). Needs a Z.AI /
+  GLM Coding Plan API key (ZAI_MCP_API_KEY, falling back to GLM_API_KEY).
+author: Hermes Agent
+kind: backend
+provides_web_providers:
+  - zai-mcp
