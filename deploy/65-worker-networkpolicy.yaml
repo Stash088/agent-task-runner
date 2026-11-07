@@ -1,0 +1,62 @@
+# NetworkPolicy for agent-task worker (Job) pods.
+#
+# The "agent-task-runner" policy selects only service pods
+# (app.kubernetes.io/name=agent-task-runner), so worker pods were left
+# unconstrained: from inside the sandbox one could reach <POD_CIDR> (pods),
+# <SERVICE_CIDR> (services, including the API server on 6443) and the cloud
+# metadata endpoint. This policy closes that hole for workers and leaves the
+# service pods on their own, separate selector.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-task-worker
+  namespace: agent-tasks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-task-worker
+  policyTypes:
+    - Ingress
+    - Egress
+  # Workers never accept inbound connections: no ingress rules at all.
+  ingress: []
+  egress:
+    # 1. DNS only, and only to kube-dns.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # 2. External HTTPS/HTTP for LLM providers and web tools.
+    #
+    # "except" is mandatory, not cosmetic: 0.0.0.0/0 otherwise also covers the
+    # cluster ranges (pod <POD_CIDR>, service <SERVICE_CIDR> — that is where the
+    # API server on 6443 lives), the cloud metadata endpoint, and the node
+    # addresses themselves, which would re-open exactly the paths this policy
+    # exists to block. Node /32s are listed because kube-router applies egress
+    # rules after DNAT, so a ClusterIP:443 dial leaves as <nodeIP>:6443.
+    #
+    # Port 80 stays allowed: some providers answer plain HTTP with a redirect
+    # before serving HTTPS, and blocking it breaks those fetches.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - <POD_CIDR>
+              - <SERVICE_CIDR>
+              - 169.254.169.254/32
+              - <API_NODE_1_IP>/32
+              - <API_NODE_2_IP>/32
+              - <API_NODE_3_IP>/32
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80

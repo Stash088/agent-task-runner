@@ -20,9 +20,9 @@ data:
   DEFAULT_TOOLSETS: "web"
   ALLOWED_PROVIDERS: "opencode-go,zai"
   ALLOWED_MODELS: '^(deepseek-v4\.[0-9](-[a-z]+)?|glm-5[.0-9]*(-flash)?|qwen3\.[0-9](-flash)?)$'
-  ALLOWED_TOOLSETS: "web,files,terminal,memory"
-  DEFAULT_CPU: "500m"
-  DEFAULT_MEMORY: "1Gi"
+  ALLOWED_TOOLSETS: "web,file,terminal,memory,search,vision"
+  DEFAULT_CPU: "1"
+  DEFAULT_MEMORY: "1.5Gi"
   MAX_CPU: "2"
   MAX_MEMORY: "4Gi"
   MAX_LOG_BYTES: "262144"

@@ -5,3 +5,11 @@ metadata:
   labels:
     app.kubernetes.io/name: agent-task-runner
     app.kubernetes.io/part-of: agent-task-runner
+    # Pod Security Admission.
+    # enforce=restricted would break the worker's init container: it runs as
+    # root to chown the workspace before the agent starts as UID 10000. So
+    # enforce stays at baseline while restricted is applied as warn/audit --
+    # regressions surface in events and warnings without failing the Job.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
